@@ -36,7 +36,7 @@ extern "C"
             {
                 continue;
             }
-            __m128i *block = (__m128i *)(db + (elems[i]*block_len));
+            __m256i *block = (__m256i *)(db + (elems[i]*block_len));
             for (int b = 0; b < (block_len / 32); b++)
             {
                 __m256i out256 = _mm256_loadu_si256((__m256i *)out + b);
