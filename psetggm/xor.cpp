@@ -23,6 +23,7 @@ extern "C"
             memset(out, 0, block_len);
         } else {
             if (xorType == 1) {
+                memset(out, 0, block_len);
                 memcpy(out, out-block_len, block_len);
             } 
         }
@@ -35,7 +36,7 @@ extern "C"
             {
                 continue;
             }
-            __m256i *block = (__m256i *)(db + elems[i]);
+            __m128i *block = (__m128i *)(db + (elems[i]*block_len));
             for (int b = 0; b < (block_len / 32); b++)
             {
                 __m256i out256 = _mm256_loadu_si256((__m256i *)out + b);
@@ -179,12 +180,7 @@ extern "C"
                 //std::cout <<" add: ";
             //}
         }
-        //std::cout << "not AVX: "<<(db_len - block_len) << ", db_len: " << db_len << ", block_len: " << block_len<< std::endl;
-        //std::cout << "db: " << *db << ", += elems[0]: " << *(db+elems[0]) << std::endl;
-        //printf("db: %p, elem[0]: %d, db+elem[0]_1: %p, db+elem[0]_2: %p \n", (uint8_t*) db, elems[0], (uint8_t*)(db+elems[0]), (__m128i*)(db+elems[0]));
-        //printf("pointer before: %p, pointer now: %p \n", (uint32_t*) (db+elems[0]), (uint32_t*) (db + (elems[0]*block_len)));
-        //printf("db_len %d , block_len: %d \n", db_len, block_len);
-        //printf("\n new set: \n");
+
         for (int i = 0; i < num_elems; i++)
         {
             if (elems[i] > (db_len-block_len))
@@ -193,14 +189,7 @@ extern "C"
             }
 
             __m128i *block = (__m128i *)(db + (elems[i]*block_len));
-            // if (elems[i] == 57) {
-            //     for (int i = 0; i < 16; i++) {
-            //         std::cout << std::bitset<8> (db[57*block_len + i]) << ", ";
-            //     }
-            //     std::cout << std::endl;
-                
-            // }
-            //printf("%d, ",elems[i]);
+
             for (int b = 0; b < (block_len / 16); b++)
             {   
                 //printf("got here!%d",b);
