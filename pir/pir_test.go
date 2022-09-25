@@ -25,16 +25,16 @@ func TestPIRPuncTwo(t *testing.T) {
 	err := client.Init(PuncTwo)
 	assert.NilError(t, err)
 	start := time.Now()
-	val, err := client.Read(20000)
+	val, err := client.Read(521)
 	elapsed := time.Since(start)
 	fmt.Printf("punctwo took %s \n", elapsed)
 	assert.NilError(t, err)
-	assert.DeepEqual(t, val, db.Row(20000))
+	assert.DeepEqual(t, val, db.Row(521))
 
 	// // Test refreshing by reading the same item again
-	val, err = client.Read(20000)
+	val, err = client.Read(521)
 	assert.NilError(t, err)
-	assert.DeepEqual(t, val, db.Row(20000))
+	assert.DeepEqual(t, val, db.Row(521))
 
 }
 
@@ -48,17 +48,17 @@ func TestPIRPunc(t *testing.T) {
 	assert.NilError(t, err)
 
 	start := time.Now()
-	val, err := client.Read(2000)
+	val, err := client.Read(793)
 
 	elapsed := time.Since(start)
 	fmt.Printf("punc took %s \n", elapsed)
 	assert.NilError(t, err)
-	assert.DeepEqual(t, val, db.Row(2000))
+	assert.DeepEqual(t, val, db.Row(793))
 
 	// Test refreshing by reading the same item again
-	val, err = client.Read(2000)
+	val, err = client.Read(793)
 	assert.NilError(t, err)
-	assert.DeepEqual(t, val, db.Row(2000))
+	assert.DeepEqual(t, val, db.Row(793))
 
 }
 

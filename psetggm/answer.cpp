@@ -43,7 +43,7 @@ void new_answer(uint8_t* pset, unsigned int univ_size, unsigned int set_size, un
     //todo, fix function to do operation above in a smart way for each xor.
     //might require re-writing xor rows to take in an input 'beginning value'
 
-    new_pset_ggm_eval_punc(gen, pset, 0, elems, next_height, db, db_len, block_len, out);
+    new_pset_ggm_eval_punc(gen, pset, shift, elems, next_height, db, db_len, block_len, out);
     free(workspace);
 
 }

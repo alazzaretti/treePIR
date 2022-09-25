@@ -105,6 +105,7 @@ func (req *PuncTwoHintReq) Process(db StaticDB) (HintResp, error) {
 	setGen := NewSetGeneratorTwo(req.RandSeed, 0, db.NumRows, setSize)
 	
 	var pset PuncturableSet
+
 	for i := 0; i < nHints; i++ {
 		setGen.GenTwo(&pset)
 
@@ -219,7 +220,8 @@ func (c *puncTwoClient) findIndex(i int) (setIdx int) {
 		setKeyNoShift := c.sets[j]
 		//below needed if we are shifting sets, right now we are not
 		//shift := setKeyNoShift.shift
-		setKeyNoShift.shift = 0
+		//fmt.Printf("shift: %d",setKeyNoShift.shift)
+		//setKeyNoShift.shift = 0
 		//check just one element of set:
 		//specifically need logic to eval only one element of pset
 		//probably need to add function to be able to 'evalAt'
@@ -233,7 +235,7 @@ func (c *puncTwoClient) findIndex(i int) (setIdx int) {
 		output_index := setGen.EvalOn(setKeyNoShift, &pset, i);
 		//fmt.Println(output_index)
 		if output_index == i {
-			//fmt.Println(j)
+
 			return j
 		}
 		//dont need to iterate through sets since we can check in o(1) time
@@ -286,6 +288,8 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	}
 	var ctx puncTwoQueryCtx
 	//obviously findIndex needs to be changed (as stated above)
+	
+
 	ctx.setIdx = c.findIndex(i);
 
 	ctx.valPos = GetPos(i, c.setSize)
@@ -296,8 +300,10 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 
 	
 	//stays the same if setIdx is coded consistently with this 
+	//double check if i really need this eval?
+
 	pset := c.eval(ctx.setIdx)
-	
+
 	//logic to pick what set to send where: good for us maybe? will leave for now and
 	//if needed I'll hardcode a case for testing
 	//punc algorithm is 
@@ -306,13 +312,14 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	ctx.randCase = c.sample(c.setSize-1, c.setSize-1, c.nRows)
 	
 	//hardcoding for now so that I can test properly: remove later
-	//ctx.randCase = 0
+	ctx.randCase = 0
 
 	//need to change random member except to not use set since we do not evaluate
 	switch ctx.randCase {
 	case 0:
 		start := time.Now()
 		newSet := c.setGen.GenWithTwo(i)
+
 		elapsed := time.Since(start)
 		fmt.Printf("genwith took %s \n", elapsed)
 		extraL = c.randomMemberExcept(newSet, i)
@@ -382,7 +389,6 @@ func (c *puncTwoClient) replaceSet(setIdx int, newSet PuncturableSet) {
 	// }
 
 	c.sets[setIdx] = newSet.SetKey
-
 	//old logic to groom hashmap
 	// for _, v := range newSet.elems {
 	// 	c.idxToSetIdx[v] = int32(setIdx)
@@ -411,7 +417,7 @@ func (q *PuncTwoQueryReq) Process(db StaticDB) (interface{}, error) {
 	resp := PuncTwoQueryResp{Answer: /*make(Row, db.RowLen)}*/make([]byte, (q.PuncturedSet.SetSize+1)*db.RowLen)}
 
 
-
+	//ADD pset shift?????
 	psetggm.FastAnswerTwo(q.PuncturedSet.Keys, q.PuncturedSet.UnivSize, q.PuncturedSet.SetSize, int(q.PuncturedSet.Shift),
 		getNextHeight(),db.FlatDb, db.RowLen, resp.Answer)
 

@@ -20,8 +20,8 @@ type SetKey struct {
 }
 
 type BaseGenerator interface {
-	Eval(seed []byte, elems []int)
-	EvalOn(seed []byte, pos int) int
+	Eval(seed []byte, elems []int, opt_shift uint32)
+	EvalOn(seed []byte, pos int, opt_shift uint32) int
 	Punc(seed []byte, pos int) []byte
 	EvalPunctured(pset []byte, hole int, elems []int)
 	Distinct(elems []int) bool
@@ -101,12 +101,12 @@ func (gen *SetGenerator) GenTwo(pset *PuncturableSet) {
 	//look if need to change to gentwo 
 	gen.gentwo(pset)
 
-	block := make([]byte, 16)
-	out := make([]byte, 16)
-	block[0] = 0xBB
-	binary.LittleEndian.PutUint32(block[1:], uint32(pset.id))
-	gen.idGen.Encrypt(out, block)
-	pset.shift = 0
+	//block := make([]byte, 16)
+	//out := make([]byte, 16)
+	//block[0] = 0xBB
+	//binary.LittleEndian.PutUint32(block[1:], uint32(pset.id))
+	//gen.idGen.Encrypt(out, block)
+	//pset.shift = 0
 
 	//no shift for now!
 	
@@ -135,8 +135,8 @@ func (gen *SetGenerator) GenTwoNoEval(pset *PuncturableSet) {
 	
 	//change this enumeration, will not work with our implementation as is: think about later
 	//how to put this shift so we can genwith fast
-	pset.shift=0
-	//pset.shift = binary.LittleEndian.Uint32(out) % uint32(gen.setSize)
+	//pset.shift=0
+	pset.shift = binary.LittleEndian.Uint32(out) % uint32(gen.setSize)
 	//for i := 0; i < len(pset.elems); i++ {
 	//	pset.elems[i] = int((uint32(pset.elems[i]) + pset.shift) % uint32(gen.univSize))
 	//}
@@ -173,14 +173,19 @@ func (gen *SetGenerator) GenWith(val int) (pset PuncturableSet) {
 //change LOGIC TO GEN UNTIL WE FIND, or sync shift to our imp: as is generates random new set
 //for easy implementation, we can just loop through this current logic and add check
 func (gen *SetGenerator) GenWithTwo(val int) (pset PuncturableSet) {
+	//why does this work if no pset is passed?
+	//not sure but okay
+
 	gen.genwithtwonoeval(&pset, val)
 
-	block := make([]byte, 16)
-	seed := make([]byte, 16)
-	block[0] = 0xBB
-	binary.LittleEndian.PutUint32(block[1:], uint32(pset.id))
-	gen.idGen.Encrypt(seed, block)
-	pset.shift =0
+	//block := make([]byte, 16)
+	//seed := make([]byte, 16)
+	//block[0] = 0xBB
+	//binary.LittleEndian.PutUint32(block[1:], uint32(pset.id))
+	//gen.idGen.Encrypt(seed, block)
+	
+
+	//pset.shift =0
 
 
 	//notice these shifts, look at how to adapt to our thing later:
@@ -213,7 +218,7 @@ func (gen *SetGenerator) gen(pset *PuncturableSet) {
 		gen.num++
 
 		gen.idGen.Encrypt(pset.seed[:], block[:])
-		gen.baseGen.Eval(pset.seed[:], pset.elems)
+		gen.baseGen.Eval(pset.seed[:], pset.elems,0)
 
 		if gen.baseGen.Distinct(pset.elems) {
 			return
@@ -231,24 +236,29 @@ func (gen *SetGenerator) gentwo(pset *PuncturableSet) {
 	}
 	var block [16]byte
 
-	for {
-		block[0] = 0xAA
-		binary.LittleEndian.PutUint32(block[1:], uint32(gen.num))
-		pset.id = gen.num
 
-		gen.num++
+	block[0] = 0xAA
+	binary.LittleEndian.PutUint32(block[1:], uint32(gen.num))
+	pset.id = gen.num
+	gen.num++
+	gen.idGen.Encrypt(pset.seed[:], block[:])
 
-		gen.idGen.Encrypt(pset.seed[:], block[:])
-		gen.baseGen.Eval(pset.seed[:], pset.elems)
 
-		return
-		//for our pset it does not matter if our elements are distinct
-		//can also remove for later if want to clean up.
+	block2 := make([]byte, 16)
+	out := make([]byte, 16)
+	block2[0] = 0xBB
+	binary.LittleEndian.PutUint32(block2[1:], uint32(pset.id))
+	gen.idGen.Encrypt(out, block2)
+	
 
-		//if gen.baseGen.Distinct(pset.elems) {
-		//	return
-		//}
-	}
+	shift := binary.LittleEndian.Uint32(out) % uint32(gen.setSize)
+
+	gen.baseGen.Eval(pset.seed[:], pset.elems, shift)
+	pset.shift = shift
+
+
+	return
+
 }
 
 func (gen *SetGenerator) gentwonoeval(pset *PuncturableSet) {
@@ -277,19 +287,18 @@ func (gen *SetGenerator) genwithtwonoeval(pset *PuncturableSet, index int) {
 	}
 	var block [16]byte
 
-	for {
-		block[0] = 0xAA
-		binary.LittleEndian.PutUint32(block[1:], uint32(gen.num))
-		pset.id = gen.num
-		gen.num++
+	
+	block[0] = 0xAA
+	binary.LittleEndian.PutUint32(block[1:], uint32(gen.num))
+	pset.id = gen.num
+	gen.num++
 
-		gen.idGen.Encrypt(pset.seed[:], block[:])
+	gen.idGen.Encrypt(pset.seed[:], block[:])
+	val1 := gen.baseGen.EvalOn(pset.seed[:], index, 0) % pset.setSize //pass in shift of 0 to eval on because we will decide shift later
 
-		if gen.baseGen.EvalOn(pset.seed[:], index) == index {
-
-			return
-		}
-	}
+	val2 := index % pset.setSize
+	pset.shift = uint32(MathMod((val1 - val2), pset.setSize))
+	//fmt.Println(pset.shift)
 }
 
 
@@ -336,7 +345,7 @@ func (gen *SetGenerator) EvalInPlace(key SetKey, pset *PuncturableSet) {
 	binary.LittleEndian.PutUint32(block[1:], key.id)
 
 	gen.idGen.Encrypt(pset.seed[:], block[:])
-	gen.baseGen.Eval(pset.seed[:], pset.elems)
+	gen.baseGen.Eval(pset.seed[:], pset.elems, 0)
 
 	if key.shift == 0 {
 		return
@@ -363,16 +372,16 @@ func (gen *SetGenerator) EvalInPlaceTwo(key SetKey, pset *PuncturableSet) {
 	binary.LittleEndian.PutUint32(block[1:], key.id)
 
 	gen.idGen.Encrypt(pset.seed[:], block[:])
-	gen.baseGen.Eval(pset.seed[:], pset.elems)
+	gen.baseGen.Eval(pset.seed[:], pset.elems, key.shift)
 
 	if key.shift == 0 {
 		return
 	}
-	fmt.Println("make sure we never see this in evalinplacetwo")
+	//fmt.Println("make sure we never see this in evalinplacetwo")
 	//note how shift is done, use that same logic here as well (maybe write helper for this)
-	for i := 0; i < len(pset.elems); i++ {
-		pset.elems[i] = int((uint32(pset.elems[i]) + key.shift) % uint32(gen.univSize))
-	}
+	// for i := 0; i < len(pset.elems); i++ {
+	// 	pset.elems[i] = int((uint32(pset.elems[i]) + key.shift) % uint32(gen.univSize))
+	// }
 }
 
 func (gen *SetGenerator) EvalOn(key SetKey, pset *PuncturableSet, idx int) int {
@@ -386,7 +395,7 @@ func (gen *SetGenerator) EvalOn(key SetKey, pset *PuncturableSet, idx int) int {
 
 	gen.idGen.Encrypt(pset.seed[:], block[:])
 
-	return gen.baseGen.EvalOn(pset.seed[:], idx)
+	return gen.baseGen.EvalOn(pset.seed[:], idx, pset.shift)
 
 }
 
@@ -428,7 +437,7 @@ func (gen *SetGenerator) PuncTwo(pset PuncturableSet, idx int) PuncturedSet {
 		UnivSize: pset.univSize,
 		SetSize: pset.setSize - 1,
 		Hole: 0,
-		Shift: 0,
+		Shift: pset.shift,
 		Keys: gen.baseGen.Punc(pset.seed[:], idx)}
 }
 

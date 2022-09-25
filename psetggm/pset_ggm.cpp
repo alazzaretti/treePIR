@@ -172,7 +172,7 @@ void tree_eval_all2(generator* gen, __m128i seed, long long unsigned int* elems)
 //uses new approach we present in paper
 //need to change so that each aes eval points to one element, not 4, or else it breaks
 //this is not true as shown by implementation below
-void new_tree_eval_all2(new_generator* gen, __m128i seed, long long unsigned int* elems) {
+void new_tree_eval_all2(new_generator* gen, __m128i seed, long long unsigned int* elems, uint32_t val_shift) {
     uint32_t max_depth = get_height(gen->set_size); 
     int num_layers = max_depth - 2;
 
@@ -196,7 +196,7 @@ void new_tree_eval_all2(new_generator* gen, __m128i seed, long long unsigned int
             keys[i] = _mm_xor_si128(keys[i], key);
         }
     }
-    uint32_t shift = get_height(gen->sqrt_univ_size);
+    uint32_t real_height = get_height(gen->sqrt_univ_size);
    
     const uint32_t* keys_as_elems = (uint32_t*)gen->keys;
     for (int i = 0; i < gen->set_size; i++) {
@@ -207,9 +207,9 @@ void new_tree_eval_all2(new_generator* gen, __m128i seed, long long unsigned int
         //shift of i and shift of othter part needs to be proportional to set size or we get out of bounds.
         //current code assumes set size is a power of two
         uint32_t mod_out = (((uint64_t)keys_as_elems[i] * (uint64_t) gen->sqrt_univ_size) >> 32);
-
+        mod_out = (mod_out + val_shift) % (gen->sqrt_univ_size);
         
-        elems[i] =  ((uint32_t) (i << shift)) ^ (mod_out); //gen->keys[i] % gen->sqrt_univ_size;
+        elems[i] =  ((uint32_t) (i << real_height)) ^ (mod_out); //gen->keys[i] % gen->sqrt_univ_size;
         //std::cout << elems[i] << std::endl;
     }
 }
@@ -221,8 +221,8 @@ void pset_ggm_eval(generator* gen, const uint8_t* seed, long long unsigned* elem
     tree_eval_all2(gen, toBlock(seed), elems);
 }
 
-void new_pset_ggm_eval(new_generator* gen, const uint8_t* seed, long long unsigned* elems) {
-    new_tree_eval_all2(gen, toBlock(seed), elems);
+void new_pset_ggm_eval(new_generator* gen, const uint8_t* seed, long long unsigned* elems, uint32_t val_shift) {
+    new_tree_eval_all2(gen, toBlock(seed), elems, val_shift);
 }
 
 
@@ -246,7 +246,7 @@ unsigned int new_pset_buffer_size(const new_generator* gen) {
 
 
 //fix: no need to save keys or anything....
-long long unsigned new_pset_ggm_eval_on(new_generator* gen, const uint8_t* seed, unsigned int pos, uint8_t* pset) {
+long long unsigned new_pset_ggm_eval_on(new_generator* gen, const uint8_t* seed, unsigned int pos, uint8_t* pset, uint32_t val_shift) {
 
     __m128i* pset_keys = (__m128i*)pset;
 
@@ -288,6 +288,7 @@ long long unsigned new_pset_ggm_eval_on(new_generator* gen, const uint8_t* seed,
     uint32_t pos_idx = (pos & 0b11);
     //hardcoded to only suit 16bit i
     uint32_t mod_out = (((uint64_t)last_key[pos_idx] * (uint64_t) gen->sqrt_univ_size) >> 32);
+    mod_out = (mod_out + val_shift) % (gen->sqrt_univ_size);
     //std::cout << "mod_out: "<< mod_out << std::endl;
     //std::cout << pos_idx<<", "<<last_key[0]<<", "<<mod_out <<", " << pos<<std::endl;
     return ((uint32_t) (pos << real_height)) ^ (mod_out);
@@ -511,10 +512,12 @@ void pset_ggm_eval_punc(generator* gen, const uint8_t* pset, unsigned int pos, l
 //      1: evaluate first set where punc index = i (initially 0)
 //      2: evaluate parity of set and iterate through four possibilities within key
 //      3: iterate punctured key placement, adding and removing relevant elements, go from 0...root(n)-1
-void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos, long long unsigned int* elems, const uint32_t* next_height, 
+void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int val_shift, long long unsigned int* elems, const uint32_t* next_height, 
     const uint8_t* db, unsigned int db_len, unsigned int block_len, 
     uint8_t* out) {
-    pos=0;
+    
+
+    uint32_t pos=0;
     uint32_t height = get_height(gen->set_size); 
     __m128i* keys = gen->keys;
     __m128i* tmp =  gen->tmp;
@@ -587,6 +590,7 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos,
 
 
         uint32_t mod_out = (((uint64_t)keys_as_elems[i] * (uint64_t) gen->sqrt_univ_size) >> 32);
+        mod_out = (mod_out + val_shift) % (gen->sqrt_univ_size);
         //std::cout << pos_idx<<", "<<last_key[0]<<", "<<mod_out <<", " << pos<<std::endl;
         elems[out_pos] =  ((uint32_t) (i << real_height)) ^ (mod_out);//((uint64_t) i << 16) ^ (((uint64_t)keys_as_elems[i] * (uint64_t) gen->sqrt_univ_size) >> 32); //gen->keys[i] % gen->sqrt_univ_size;
         //std::cout << elems[out_pos] << std::endl;
@@ -622,10 +626,13 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos,
 
 
 
-
+        //shift does not change logic below:
+        //remove current first half of eval and switch for new first half (another i)
 
         xor_rows(db, db_len, elems + i, 1, block_len, tmp_pointer, 1);
+
         elems[pos + i] =  (elems[pos+i] & ((gen->set_size)-1)) ^ ((pos + i) << real_height);
+        
         xor_rows(db, db_len, elems+ i, 1, block_len, tmp_pointer, 2);
         // std::cout << tmp_pointer[0] << std::endl;
         //TODO: get parity, save (each step in loop represents different potential set)
@@ -702,7 +709,7 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos,
         //to recurse we need to 'adjust pos' and also send an offset for the function to correctly
         //append the correct 'i'
         //std::cout << "new offset: " <<real_off <<", offsetted pos: " <<pos - real_off << std::endl;
-        new_pset_ggm_eval_punc_helper(tmp_gen, pset,pos - real_off, real_height, elems+real_off, real_off,db, db_len, block_len, tmp_pointer);
+        new_pset_ggm_eval_punc_helper(tmp_gen, pset,pos - real_off, val_shift, real_height, elems+real_off, real_off,db, db_len, block_len, tmp_pointer);
 
         //TODO: re-evaluate parities (only affected elements), and then iterate over 3 other pos indices 
 
@@ -727,7 +734,7 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos,
 
 
 
-void new_pset_ggm_eval_punc_helper(new_generator* gen, const uint8_t* pset, unsigned int pos, uint32_t real_height, long long unsigned int* elems,uint32_t offset,  
+void new_pset_ggm_eval_punc_helper(new_generator* gen, const uint8_t* pset, unsigned int pos, uint32_t val_shift, uint32_t real_height, long long unsigned int* elems,uint32_t offset,  
     const uint8_t* db, unsigned int db_len, unsigned int block_len, 
     uint8_t* out) {
     uint32_t height = get_height(gen->set_size); 
@@ -774,7 +781,7 @@ void new_pset_ggm_eval_punc_helper(new_generator* gen, const uint8_t* pset, unsi
         //actually thinking about htis, maybe this is why we dont get full randomness? should I fix it to 16?
         
         uint32_t mod_out = (((uint64_t)keys_as_elems[i] * (uint64_t) gen->sqrt_univ_size) >> 32);
-        
+        mod_out = (mod_out + val_shift) % (gen->sqrt_univ_size);
         elems[out_pos] =  ((uint32_t) ((offset+i) << real_height)) ^ (mod_out);
         
         //elems[out_pos] =  ((uint64_t) (offset+i) << 16) ^ (((uint64_t)keys_as_elems[i] * (uint64_t) gen->sqrt_univ_size) >> 32); //gen->keys[i] % gen->sqrt_univ_size;

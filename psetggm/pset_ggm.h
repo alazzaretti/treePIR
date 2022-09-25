@@ -27,15 +27,15 @@ int distinct(generator* gen, const long long unsigned int* elems, unsigned int n
 
 unsigned int new_workspace_size(unsigned int univ_size, unsigned int set_size);
 new_generator* new_pset_ggm_init(unsigned int univ_size, unsigned int sqrt_univ_size, unsigned int set_size, uint8_t* workspace);
-void new_pset_ggm_eval(new_generator* gen, const uint8_t* seed, long long unsigned int* elems);
+void new_pset_ggm_eval(new_generator* gen, const uint8_t* seed, long long unsigned int* elems, uint32_t val_shift);
 
 unsigned int new_pset_buffer_size(const new_generator* gen);
-long long unsigned new_pset_ggm_eval_on(new_generator* gen, const uint8_t* seed, unsigned int pos, uint8_t* pset);
+long long unsigned new_pset_ggm_eval_on(new_generator* gen, const uint8_t* seed, unsigned int pos, uint8_t* pset, uint32_t val_shift);
 void new_pset_ggm_punc(new_generator* gen, const uint8_t* seed, unsigned int pos, uint8_t* pset);
-void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int pos, long long unsigned int* elems, const uint32_t* next_height, 
+void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int val_shift, long long unsigned int* elems, const uint32_t* next_height, 
     const uint8_t* db, unsigned int db_len, unsigned int block_len, 
     uint8_t* out);
-void new_pset_ggm_eval_punc_helper(new_generator* gen, const uint8_t* pset, unsigned int pos, uint32_t real_height, long long unsigned int* elems,uint32_t offset,  
+void new_pset_ggm_eval_punc_helper(new_generator* gen, const uint8_t* pset, unsigned int pos, uint32_t val_shift, uint32_t real_height, long long unsigned int* elems,uint32_t offset,  
     const uint8_t* db, unsigned int db_len, unsigned int block_len, 
     uint8_t* out);
 int new_distinct(new_generator* gen, const long long unsigned int* elems, unsigned int num_elems);

@@ -28,7 +28,7 @@ func NewGGMSetGeneratorC(univSize, setSize int) *GGMSetGeneratorC {
 	return &gen
 }
 
-func (gen *GGMSetGeneratorC) Eval(seed []byte, elems []int) {
+func (gen *GGMSetGeneratorC) Eval(seed []byte, elems []int, val_shift uint32) {
 	C.pset_ggm_eval(gen.cgen, (*C.uchar)(&seed[0]), (*C.ulonglong)(unsafe.Pointer(&elems[0])))
 }
 
@@ -39,7 +39,7 @@ func (gen *GGMSetGeneratorC) Punc(seed []byte, pos int) []byte {
 }
 
 //not implemented, here for compatibility
-func (gen *GGMSetGeneratorC) EvalOn(seed []byte, pos int) int {
+func (gen *GGMSetGeneratorC) EvalOn(seed []byte, pos int, val_shift uint32) int {
 	return 0
 }
 

@@ -216,7 +216,7 @@ func BenchmarkGGMEvalC(b *testing.B) {
 	b.Run(fmt.Sprintf("UnivSize=%d", *univSize), func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			seed[0] = (byte)(i % 256)
-			gen.Eval(seed, set)
+			gen.Eval(seed, set,0)
 		}
 	})
 }

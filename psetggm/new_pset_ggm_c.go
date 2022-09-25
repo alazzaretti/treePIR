@@ -28,13 +28,13 @@ func NewSecondGGMSetGeneratorC(univSize, setSize, sqrtUnivSize int) *SecondGGMSe
 	return &gen
 }
 
-func (gen *SecondGGMSetGeneratorC) Eval(seed []byte, elems []int) {
-	C.new_pset_ggm_eval(gen.cgen, (*C.uchar)(&seed[0]), (*C.ulonglong)(unsafe.Pointer(&elems[0])))
+func (gen *SecondGGMSetGeneratorC) Eval(seed []byte, elems []int, val_shift uint32) {
+	C.new_pset_ggm_eval(gen.cgen, (*C.uchar)(&seed[0]), (*C.ulonglong)(unsafe.Pointer(&elems[0])),C.uint(val_shift))
 }
 
-func (gen *SecondGGMSetGeneratorC) EvalOn(seed []byte, pos int) int {
+func (gen *SecondGGMSetGeneratorC) EvalOn(seed []byte, pos int, val_shift uint32) int {
 	pset := make([]byte, C.new_pset_buffer_size(gen.cgen))
-	return int(C.new_pset_ggm_eval_on(gen.cgen, (*C.uchar)(&seed[0]), C.uint(pos), (*C.uchar)(&pset[0])))
+	return int(C.new_pset_ggm_eval_on(gen.cgen, (*C.uchar)(&seed[0]), C.uint(pos), (*C.uchar)(&pset[0]), C.uint(val_shift)))
 }
 
 func (gen *SecondGGMSetGeneratorC) Punc(seed []byte, pos int) []byte {
