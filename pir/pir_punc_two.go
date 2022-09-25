@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"math"
-	"time"
+	//"time"
 	"math/rand"
 
 	"checklist/psetggm"
@@ -235,7 +235,6 @@ func (c *puncTwoClient) findIndex(i int) (setIdx int) {
 		output_index := setGen.EvalOn(setKeyNoShift, &pset, i);
 		//fmt.Println(output_index)
 		if output_index == i {
-
 			return j
 		}
 		//dont need to iterate through sets since we can check in o(1) time
@@ -313,18 +312,14 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	
 	//hardcoding for now so that I can test properly: remove later
 	ctx.randCase = 0
-
 	//need to change random member except to not use set since we do not evaluate
 	switch ctx.randCase {
 	case 0:
-		start := time.Now()
 		newSet := c.setGen.GenWithTwo(i)
-
-		elapsed := time.Since(start)
-		fmt.Printf("genwith took %s \n", elapsed)
 		extraL = c.randomMemberExcept(newSet, i)
 		extraR = c.randomMemberExcept(pset, i)
-
+		newSet = c.setGen.EvalTwo(newSet.SetKey)
+		//fmt.Println(newSet.elems)
 		puncSetL = c.setGen.PuncTwo(newSet, i)
 		puncSetR = c.setGen.PuncTwo(pset, i)
 		if ctx.setIdx >= 0 {

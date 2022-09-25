@@ -24,7 +24,8 @@ func MakeRows(src *rand.Rand, nRows, rowLen int) []Row {
 }
 
 func MakeDB(nRows int, rowLen int) StaticDB {
-	return *StaticDBFromRows(MakeRows(RandSource(), nRows, rowLen))
+	//return *StaticDBFromRows(MakeRows(RandSource(), nRows, rowLen))
+	return *StaticDBFromRows2(RandSource(), nRows, rowLen)
 }
 
 func MakeKeys(src *rand.Rand, nRows int) []uint32 {

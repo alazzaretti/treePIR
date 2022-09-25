@@ -9,16 +9,17 @@ import (
 )
 
 //benchmarks for 2^24 elements query time
-//punctwo: 11.058542ms
+//punctwo: 2.5ms
 //punc: 326.916µs but them 3ms
 //dpf: 281.46725ms
 
 //projections for 2^32 elements
-//punctwo: 500ms
+//punctwo: 200ms
 //punc 12ms
 //dpf: 56s
 func TestPIRPuncTwo(t *testing.T) {
-	db := MakeDB(16777216, 16)
+	dbSize := 16777216
+	db := MakeDB(dbSize, 16)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 
@@ -35,12 +36,51 @@ func TestPIRPuncTwo(t *testing.T) {
 	val, err = client.Read(521)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, val, db.Row(521))
+	//read every other index
+	start = time.Now()
+	for i:= 0; i<dbSize;i+=4097 {
+		val,err=client.Read(i)
+		assert.NilError(t, err)
 
+		
+		
+		assert.DeepEqual(t, val, db.Row(i))
+		val,err=client.Read(i)
+		assert.NilError(t, err)
+
+		
+		
+		assert.DeepEqual(t, val, db.Row(i))
+
+		// fmt.Println(i)
+		// fmt.Println(val)
+		// fmt.Println(db.Row(i))
+	}
+	elapsed = time.Since(start)
+	fmt.Printf("punctwo on %d indices took %s \n", (2*dbSize)/4097,elapsed)
+
+	//test pirpunc in same test
+	fmt.Println("punc now-------")
+	err2 := client.Init(Punc)
+	assert.NilError(t, err2)
+
+	start2 := time.Now()
+	val2, err2 := client.Read(793)
+
+	elapsed2 := time.Since(start2)
+	fmt.Printf("punc took %s \n", elapsed2)
+	assert.NilError(t, err2)
+	assert.DeepEqual(t, val2, db.Row(793))
+
+	// Test refreshing by reading the same item again
+	val2, err2 = client.Read(793)
+	assert.NilError(t, err2)
+	assert.DeepEqual(t, val2, db.Row(793))
 }
 
 
 func TestPIRPunc(t *testing.T) {
-	db := MakeDB(16777216, 16)
+	db := MakeDB(4096, 16)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 
@@ -63,20 +103,20 @@ func TestPIRPunc(t *testing.T) {
 }
 
 func TestMatrix(t *testing.T) {
-	db := MakeDB(4096, 16)
+	db := MakeDB(65536, 16)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 
 	err := client.Init(Matrix)
 	assert.NilError(t, err)
 
-	val, err := client.Read(0x7)
+	val, err := client.Read(0x23)
 	assert.NilError(t, err)
-	assert.DeepEqual(t, val, db.Row(7))
+	assert.DeepEqual(t, val, db.Row(0x23))
 }
 
 func TestDPF(t *testing.T) {
-	db := MakeDB(4096, 16)
+	db := MakeDB(65536, 16)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 

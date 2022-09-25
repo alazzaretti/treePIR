@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"math"
-	"time"
+	//"time"
 	"math/rand"
 
 	"checklist/psetggm"
@@ -216,10 +216,10 @@ func (c *puncClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	ctx.randCase = c.sample(c.setSize-1, c.setSize-1, c.nRows)
 	switch ctx.randCase {
 	case 0:
-		start:= time.Now()
+		//start:= time.Now()
 		newSet := c.setGen.GenWith(i)
-		elapsed := time.Since(start)
-		fmt.Printf("genwith took %s \n", elapsed)
+		//elapsed := time.Since(start)
+		//fmt.Printf("genwith took %s \n", elapsed)
 		extraL = c.randomMemberExcept(newSet, i)
 		extraR = c.randomMemberExcept(pset, i)
 		puncSetL = c.setGen.Punc(newSet, i)

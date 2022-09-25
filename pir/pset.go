@@ -297,8 +297,9 @@ func (gen *SetGenerator) genwithtwonoeval(pset *PuncturableSet, index int) {
 	val1 := gen.baseGen.EvalOn(pset.seed[:], index, 0) % pset.setSize //pass in shift of 0 to eval on because we will decide shift later
 
 	val2 := index % pset.setSize
-	pset.shift = uint32(MathMod((val1 - val2), pset.setSize))
+	pset.shift = uint32(MathMod((val2 - val1), pset.setSize))
 	//fmt.Println(pset.shift)
+	//fmt.Printf("val1: %d, val2: %d, shift: %d \n", val1,val2,pset.shift)
 }
 
 
@@ -373,6 +374,7 @@ func (gen *SetGenerator) EvalInPlaceTwo(key SetKey, pset *PuncturableSet) {
 
 	gen.idGen.Encrypt(pset.seed[:], block[:])
 	gen.baseGen.Eval(pset.seed[:], pset.elems, key.shift)
+	//fmt.Println(key.shift)
 
 	if key.shift == 0 {
 		return

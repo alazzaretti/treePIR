@@ -2,7 +2,7 @@ package pir
 
 import (
 	"fmt"
-
+	"math/rand"
 	"github.com/lukechampine/fastxor"
 )
 
@@ -41,6 +41,23 @@ func StaticDBFromRows(data []Row) *StaticDB {
 	}
 	return &StaticDB{len(data), rowLen, flatDb}
 }
+
+
+func StaticDBFromRows2(src *rand.Rand, nRows, rowLen int) *StaticDB {
+	if (nRows < 1 || rowLen < 1) {
+		return &StaticDB{0, 0, nil}
+	}
+	flatDb := make([]byte, rowLen * nRows)
+	for i := 0; i < nRows; i++ {
+		for j := 0; j < rowLen; j++ {
+			currI := i * rowLen
+			flatDb[currI + j]  = byte((i+j)%256)
+		}
+	}
+	return &StaticDB{nRows, rowLen, flatDb}
+}
+
+
 
 func (db StaticDB) Hint(req HintReq, resp *HintResp) (err error) {
 	*resp, err = req.Process(db)
