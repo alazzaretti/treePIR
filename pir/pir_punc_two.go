@@ -290,7 +290,7 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	
 
 	ctx.setIdx = c.findIndex(i);
-
+	//fmt.Println(ctx.setIdx)
 	ctx.valPos = GetPos(i, c.setSize)
 	if ctx.setIdx < 0 {
 		return nil, nil
@@ -302,7 +302,7 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	//double check if i really need this eval?
 
 	pset := c.eval(ctx.setIdx)
-
+	//fmt.Println(pset.elems)
 	//logic to pick what set to send where: good for us maybe? will leave for now and
 	//if needed I'll hardcode a case for testing
 	//punc algorithm is 
@@ -318,8 +318,6 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 		newSet := c.setGen.GenWithTwo(i)
 		extraL = c.randomMemberExcept(newSet, i)
 		extraR = c.randomMemberExcept(pset, i)
-		newSet = c.setGen.EvalTwo(newSet.SetKey)
-		//fmt.Println(newSet.elems)
 		puncSetL = c.setGen.PuncTwo(newSet, i)
 		puncSetR = c.setGen.PuncTwo(pset, i)
 		if ctx.setIdx >= 0 {
@@ -428,8 +426,8 @@ func (c *puncTwoClient) reconstruct(ctx puncTwoQueryCtx, resp []*PuncTwoQueryRes
 	if len(resp) != 2 {
 		return nil, fmt.Errorf("Unexpected number of answers: have: %d, want: 2", len(resp))
 	}
-
-	out := make(Row, len(c.hints[0]))
+	rowLen := len(c.hints[0])
+	out := make(Row, rowLen)
 	if ctx.setIdx < 0 {
 		return nil, errors.New("couldn't find element in collection")
 	}
@@ -437,18 +435,18 @@ func (c *puncTwoClient) reconstruct(ctx puncTwoQueryCtx, resp []*PuncTwoQueryRes
 	//make sure this is consistent or hardcode ctx.randcase to test
 
 	//gets me actual index that I am interested within all parities
-	realidx := len(c.hints[0])*(ctx.valPos)
+	realidx := rowLen*(ctx.valPos)
 
 
 	switch ctx.randCase {
 	case 0:
 		hint := c.hints[ctx.setIdx]
 		xorInto(out, hint)
-		xorInto(out, resp[Right].Answer[realidx:realidx+16])
+		xorInto(out, resp[Right].Answer[realidx:realidx+rowLen])
 
 		// Update hint with refresh info
 		xorInto(hint, hint)
-		xorInto(hint, resp[Left].Answer[realidx:realidx+16])
+		xorInto(hint, resp[Left].Answer[realidx:realidx+rowLen])
 		xorInto(hint, out)
 
 	case 1:

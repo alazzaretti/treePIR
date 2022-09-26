@@ -13,13 +13,18 @@ import (
 //punc: 326.916µs but them 3ms
 //dpf: 281.46725ms
 
+//2^26: avg of 0.00885225885s per query over 32760 queries
+//checklist does about 1ms, so ~10x? logn/2?
+
+//2^28 x 32: 16ms so 2^30 = 32ms and 2^32 ~64 ms?
+
 //projections for 2^32 elements
-//punctwo: 200ms
-//punc 12ms
+//punctwo: 100ms
+//punc 8ms
 //dpf: 56s
 func TestPIRPuncTwo(t *testing.T) {
-	dbSize := 16777216
-	db := MakeDB(dbSize, 16)
+	dbSize := 268435456
+	db := MakeDB(dbSize, 32)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 
@@ -31,51 +36,52 @@ func TestPIRPuncTwo(t *testing.T) {
 	fmt.Printf("punctwo took %s \n", elapsed)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, val, db.Row(521))
-
 	// // Test refreshing by reading the same item again
 	val, err = client.Read(521)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, val, db.Row(521))
 	//read every other index
 	start = time.Now()
-	for i:= 0; i<dbSize;i+=4097 {
-		val,err=client.Read(i)
-		assert.NilError(t, err)
+	// for i:= 0; i<dbSize;i+=4097 {
+	// 	val,err=client.Read(i)
+	// 	assert.NilError(t, err)
 
 		
 		
-		assert.DeepEqual(t, val, db.Row(i))
-		val,err=client.Read(i)
-		assert.NilError(t, err)
+	// 	assert.DeepEqual(t, val, db.Row(i))
+	// 	val,err=client.Read(i)
+	// 	assert.NilError(t, err)
 
 		
 		
-		assert.DeepEqual(t, val, db.Row(i))
+	// 	assert.DeepEqual(t, val, db.Row(i))
 
-		// fmt.Println(i)
-		// fmt.Println(val)
-		// fmt.Println(db.Row(i))
-	}
-	elapsed = time.Since(start)
-	fmt.Printf("punctwo on %d indices took %s \n", (2*dbSize)/4097,elapsed)
+	// 	// fmt.Println(i)
+	// 	// fmt.Println(val)
+	// 	// fmt.Println(db.Row(i))
+	// }
+	// elapsed = time.Since(start)
+	// fmt.Printf("punctwo on %d indices took %s \n", (2*dbSize)/4097,elapsed)
 
 	//test pirpunc in same test
-	fmt.Println("punc now-------")
-	err2 := client.Init(Punc)
-	assert.NilError(t, err2)
 
-	start2 := time.Now()
-	val2, err2 := client.Read(793)
+	
+	// fmt.Println("punc now-------")
+	// err2 := client.Init(Punc)
+	// assert.NilError(t, err2)
 
-	elapsed2 := time.Since(start2)
-	fmt.Printf("punc took %s \n", elapsed2)
-	assert.NilError(t, err2)
-	assert.DeepEqual(t, val2, db.Row(793))
+	// start2 := time.Now()
+	// val2, err2 := client.Read(793)
 
-	// Test refreshing by reading the same item again
-	val2, err2 = client.Read(793)
-	assert.NilError(t, err2)
-	assert.DeepEqual(t, val2, db.Row(793))
+	// elapsed2 := time.Since(start2)
+	// fmt.Printf("punc took %s \n", elapsed2)
+	// assert.NilError(t, err2)
+	// assert.DeepEqual(t, val2, db.Row(793))
+
+	// // Test refreshing by reading the same item again
+	// val2, err2 = client.Read(793)
+	// assert.NilError(t, err2)
+	// assert.DeepEqual(t, val2, db.Row(793))
 }
 
 
