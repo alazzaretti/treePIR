@@ -63,8 +63,14 @@ func (key *DPFQueryReq) Process(db StaticDB) (interface{}, error) {
 
 func (c *dpfClient) Query(idx int) ([]QueryReq, ReconstructFunc) {
 	numBits := uint64(math.Ceil(math.Log2(float64(c.nRows))))
+	//fmt.Println(numBits)
 	qL, qR := dpf.Gen(uint64(idx), numBits)
-
+	// for i:= 0; i< len(qL);i++ {
+	// 	if qL[i] != qR[i] {
+	// 		fmt.Println(i)
+	// 	}
+	// }
+	// fmt.Println(qL)
 	return []QueryReq{&DPFQueryReq{qL}, &DPFQueryReq{qR}}, func(resps []interface{}) (Row, error) {
 		queryResps := make([]*DPFQueryResp, len(resps))
 		var ok bool
@@ -91,5 +97,8 @@ func (c *dpfClient) reconstruct(resp []*DPFQueryResp) (Row, error) {
 	out := make([]byte, len(resp[Left].Answer))
 	xorInto(out, resp[Left].Answer)
 	xorInto(out, resp[Right].Answer)
+	//fmt.Println(out)
+	//fmt.Println(resp[Left].Answer)
+	//fmt.Println(resp[Right].Answer)
 	return out, nil
 }

@@ -525,34 +525,6 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int val_
     __m128i* pset_keys = (__m128i*)pset;
     
 
-    //pos = 4;
-
-    // keys[0] = pset_keys[0];
-    // keys[1] = pset_keys[1];
-    // uint32_t curr_height = 3;
-    // std::cout << height <<std::endl;
-
-
-    // while (curr_height < height) {
-
-
-    //     __m128i key = pset_keys[curr_height - 1];
-
-
-    //     for (int i = 0; i < (1<<(curr_height - 2)) - 1; i++) {
-    //         _mm_store_si128(tmp + 2*i, key);
-    //         key = _mm_xor_si128(key, one);
-    //         _mm_store_si128(tmp + 2*i + 1, key);
-    //     }
-    //     mAesFixedKey.encryptECBBlocks(tmp, 1<<(curr_height - 2), keys+(1<<(curr_height - 3)) - 1);
-    //     for (int i = 0; i < 1<<(curr_height - 2); i++) {
-    //         __m128i key = _mm_load_si128(tmp+i);
-    //         keys[i+(1<<(curr_height - 2))] = _mm_xor_si128(keys[i+(1<<(curr_height - 2))], key);
-    //     }
-    //     curr_height += 1;
-
-    // }
-
 
     int depth = 0;
     while (height > 2) {
@@ -601,21 +573,11 @@ void new_pset_ggm_eval_punc(new_generator* gen, uint8_t* pset, unsigned int val_
 
     //TODO: save parity??? - DONE
     uint8_t* tmp_pointer = out;
-    // for (int i = 0; i < 9; i++) {
-    //     std::cout << out[0] << ", ";
-    // }
-    // std::cout << std::endl;
-    //printf("outpointer: %p", (uint8_t*) out);
+    
 
     xor_rows(db, db_len, elems, (gen->set_size)-1, block_len, tmp_pointer, 0);
 
-    // for (int i = 0; i < 9; i++) {
-    //     std::cout << out[0] << ", ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << tmp_pointer[0] << std::endl;
-    //next step:
+   
     //iterate for puncture = 0,1,2,3 - DONE below
 
     tmp_pointer = tmp_pointer+block_len;

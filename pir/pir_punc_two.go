@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"math"
-	//"time"
+	"time"
 	"math/rand"
 
 	"checklist/psetggm"
@@ -55,24 +55,6 @@ func getNextHeight() []int{
 	return nextHeight
 }
 
-//unchanged
-// func xorRowsFlatSlice(db *StaticDB, out []byte, indices Set) {
-// 	for i := range indices {
-// 		indices[i] *= db.RowLen
-// 	}
-// 	psetggm.XorBlocks(db.FlatDb, indices, out)
-
-// }
-//unchanged (for now)
-// func dbElem(db StaticDB, i int) Row {
-// 	if i < db.NumRows {
-// 		return db.Row(i)
-// 	} else {
-// 		return make(Row, db.RowLen)
-// 	}
-// }
-
-
 //unchanged (fornow)
 //NOTE: REMOVED SEC_PARAM NUM hints, readd later
 func NewPuncTwoHintReq(randSource *rand.Rand) *PuncTwoHintReq {
@@ -95,9 +77,10 @@ func (req *PuncTwoHintReq) Process(db StaticDB) (HintResp, error) {
 	//guess it makes sense
 
 	setSize := int(math.Round(math.Pow(float64(db.NumRows), 0.5)))
-	
+	start := time.Now()
 	initNextHeight(setSize)
-
+	elapsed := time.Since(start)
+	fmt.Printf("time elapsed for height arr init: %s \n",elapsed)
 	nHints := req.NumHintsMultiplier * db.NumRows / setSize
 	//fmt.Println(nHints)
 	hints := make([]Row, nHints)
@@ -154,10 +137,7 @@ func (resp *PuncTwoHintResp) NumRows() int {
 func (c *puncTwoClient) initSets() {
 
 	c.sets = make([]SetKey, len(c.hints))
-	// c.idxToSetIdx = make([]int32, c.nRows)
-	// for i := range c.idxToSetIdx {
-	// 	c.idxToSetIdx[i] = -1
-	// }
+	
 
 	var pset PuncturableSet
 	for i := 0; i < len(c.hints); i++ {
@@ -168,10 +148,6 @@ func (c *puncTwoClient) initSets() {
 		c.origSetGen.GenTwoNoEval(&pset)
 		c.sets[i] = pset.SetKey
 
-
-		//for _, j := range pset.elems {
-		//	c.idxToSetIdx[j] = int32(i)
-		//}
 	}
 
 	// Use a separate set generator with a new key for all future sets
@@ -207,10 +183,7 @@ func (c *puncTwoClient) findIndex(i int) (setIdx int) {
 	if i >= c.nRows {
 		return -1
 	}
-	//removed, used hashmap
-	// if setIdx := c.idxToSetIdx[MathMod(i, c.nRows)]; setIdx >= 0 {
-	// 	return int(setIdx)
-	// }
+
 	
 	var pset PuncturableSet
 	
@@ -313,29 +286,29 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	//hardcoding for now so that I can test properly: remove later
 	ctx.randCase = 0
 	//need to change random member except to not use set since we do not evaluate
-	switch ctx.randCase {
-	case 0:
-		newSet := c.setGen.GenWithTwo(i)
-		extraL = c.randomMemberExcept(newSet, i)
-		extraR = c.randomMemberExcept(pset, i)
-		puncSetL = c.setGen.PuncTwo(newSet, i)
-		puncSetR = c.setGen.PuncTwo(pset, i)
-		if ctx.setIdx >= 0 {
-			c.replaceSet(ctx.setIdx, newSet)
-		}
-	case 1:
-		newSet := c.setGen.GenWithTwo(i)
-		extraR = c.randomMemberExcept(newSet, i)
-		extraL = c.randomMemberExcept(newSet, extraR)
-		puncSetL = c.setGen.PuncTwo(newSet, extraR)
-		puncSetR = c.setGen.PuncTwo(newSet, i)
-	case 2:
-		newSet := c.setGen.GenWithTwo(i)
-		extraL = c.randomMemberExcept(newSet, i)
-		extraR = c.randomMemberExcept(newSet, extraL)
-		puncSetL = c.setGen.PuncTwo(newSet, i)
-		puncSetR = c.setGen.PuncTwo(newSet, extraL)
-	}
+	//switch ctx.randCase {
+	//case 0:
+	newSet := c.setGen.GenWithTwo(i)
+	extraL = c.randomMemberExcept(newSet, i)
+	extraR = c.randomMemberExcept(pset, i)
+	puncSetL = c.setGen.PuncTwo(newSet, i)
+	puncSetR = c.setGen.PuncTwo(pset, i)
+	if ctx.setIdx >= 0 {
+		c.replaceSet(ctx.setIdx, newSet)
+		//}
+	// case 1:
+	// 	newSet := c.setGen.GenWithTwo(i)
+	// 	extraR = c.randomMemberExcept(newSet, i)
+	// 	extraL = c.randomMemberExcept(newSet, extraR)
+	// 	puncSetL = c.setGen.PuncTwo(newSet, extraR)
+	// 	puncSetR = c.setGen.PuncTwo(newSet, i)
+	// case 2:
+	// 	newSet := c.setGen.GenWithTwo(i)
+	// 	extraL = c.randomMemberExcept(newSet, i)
+	// 	extraR = c.randomMemberExcept(newSet, extraL)
+	// 	puncSetL = c.setGen.PuncTwo(newSet, i)
+	// 	puncSetR = c.setGen.PuncTwo(newSet, extraL)
+	// }
 	return []QueryReq{
 			&PuncTwoQueryReq{PuncturedSet: puncSetL, ExtraElem: extraL},
 			&PuncTwoQueryReq{PuncturedSet: puncSetR, ExtraElem: extraR},
