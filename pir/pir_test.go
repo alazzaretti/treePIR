@@ -28,14 +28,14 @@ func TestPIRPuncTwo(t *testing.T) {
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
 	start := time.Now()
-	err := client.Init(PuncTwo)
+	err := client.Init(TreePIR)
 	elapsed := time.Since(start)
-	fmt.Printf("punctwo init took %s \n", elapsed)
+	fmt.Printf("treepir init took %s \n", elapsed)
 	assert.NilError(t, err)
 	start = time.Now()
 	val, err := client.Read(3)
 	elapsed = time.Since(start)
-	fmt.Printf("punctwo took %s \n", elapsed)
+	fmt.Printf("treepir took %s \n", elapsed)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, val, db.Row(3))
 	// // Test refreshing by reading the same item again
@@ -67,7 +67,7 @@ func TestPIRPuncTwo(t *testing.T) {
 	
 	elapsed = time.Since(start)
 
-	fmt.Printf("punctwo on %d indices took %s \n", (2*dbSize)/262155,elapsed)
+	fmt.Printf("treepir on %d indices took %s \n", (2*dbSize)/262155,elapsed)
 	assert.NilError(t, err)
 }
 

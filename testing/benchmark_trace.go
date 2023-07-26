@@ -129,6 +129,7 @@ func (p *printerToWriter) Write(b []byte) (n int, err error) {
 const (
 	PirTypeDPF        int = int(pir.DPF)
 	PirTypePunc       int = int(pir.Punc)
+	PirTypeTreePIR    int = int(pir.TreePIR)
 	PirTypeNonPrivate int = int(pir.NonPrivate)
 )
 

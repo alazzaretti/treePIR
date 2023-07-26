@@ -15,7 +15,7 @@ const (
 	Perm
 	DPF
 	NonPrivate
-	PuncTwo
+	TreePIR
 )
 
 type Server interface {
@@ -33,7 +33,7 @@ func NewHintReq(source *rand.Rand, pirType PirType) HintReq {
 		return NewDPFHintReq()
 	case NonPrivate:
 		return NewNonPrivateHintReq()
-	case PuncTwo:
+	case TreePIR:
 		return NewPuncTwoHintReq(source)
 	}
 	panic(fmt.Sprintf("Unknown PIR Type: %d", pirType))

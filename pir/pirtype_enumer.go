@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-const _PirTypeName = "NoneMatrixPuncPermDPFNonPrivatePuncTwo"
+const _PirTypeName = "NoneMatrixPuncPermDPFNonPrivateTreePIR"
 
 var _PirTypeIndex = [...]uint8{0, 4, 10, 14, 18, 21, 31, 38}
 
