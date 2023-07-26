@@ -34,7 +34,7 @@ func NewHintReq(source *rand.Rand, pirType PirType) HintReq {
 	case NonPrivate:
 		return NewNonPrivateHintReq()
 	case TreePIR:
-		return NewPuncTwoHintReq(source)
+		return NewTreePIRHintReq(source)
 	}
 	panic(fmt.Sprintf("Unknown PIR Type: %d", pirType))
 }

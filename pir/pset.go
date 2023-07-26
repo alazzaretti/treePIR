@@ -372,6 +372,7 @@ func (gen *SetGenerator) Punc(pset PuncturableSet, idx int) PuncturedSet {
 }
 
 
+//puncture used in treePIR
 func (gen *SetGenerator) PuncTwo(pset PuncturableSet, idx int) PuncturedSet {
 
 	return PuncturedSet {
