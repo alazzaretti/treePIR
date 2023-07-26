@@ -1,5 +1,5 @@
 # TreePIR: 
-Our repo is a fork of the Checklist repository, we instantiate our TreePIR using the same previous framework, except our pir_type is defined as PuncTwo. 
+Our repo is a fork of the Checklist repository, we instantiate our TreePIR using the same previous framework, except our pir_type is defined as TreePIR. The code is based on the [TreePIR paper](https://eprint.iacr.org/2023/204). 
 
 The file pir/pir_test.go was used to benchmark our scheme with previous ones. Our implementation of weak privately puncturable prf-based sets was written in the psetggm/pset_ggm.cpp file and psetggm/answer.cpp file. We port this to go using the psetggm/new_pset_ggm_c.go file. We use our sets to construct TreePIR by creating a new file pir/pir_punc_two.go with our pir implementation, and significantly modifying pir/pset.go. Other than this there were small modifications and optimizations across many files with respect to the original repo.
 
