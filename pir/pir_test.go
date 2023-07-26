@@ -23,7 +23,7 @@ func TestPIRPuncTwo(t *testing.T) {
 	dbSizePower := 20
     elmSize := 32
     dbSize := int(1<<dbSizePower)
-    fmt.Printf("treepir, dbSize = 2^%d, elmSize = %d bytes",dbSizePower,elmSize)
+    fmt.Printf("treepir, dbSize = 2^%d, elmSize = %d bytes\n",dbSizePower,elmSize)
     db := MakeDB(dbSize, elmSize)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
@@ -76,7 +76,7 @@ func TestPIRPunc(t *testing.T) {
 	dbSizePower := 20
     elmSize := 32
     dbSize := int(1<<dbSizePower)
-    fmt.Printf("treepir, dbSize = 2^%d, elmSize = %d bytes",dbSizePower,elmSize)
+    fmt.Printf("treepir, dbSize = 2^%d, elmSize = %d bytes\n",dbSizePower,elmSize)
     db := MakeDB(dbSize, elmSize)
 
 	client := NewPIRReader(RandSource(), Server(db), Server(db))
