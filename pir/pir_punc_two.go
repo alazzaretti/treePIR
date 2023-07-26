@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"math"
-	"time"
+	//"time"
 	"math/rand"
 
 	"checklist/psetggm"
@@ -55,8 +56,7 @@ func getNextHeight() []int{
 	return nextHeight
 }
 
-//unchanged (fornow)
-//NOTE: REMOVED SEC_PARAM NUM hints, readd later
+//unchanged 
 func NewPuncTwoHintReq(randSource *rand.Rand) *PuncTwoHintReq {
 	req := &PuncTwoHintReq{
 		RandSeed:           PRGKey{},
@@ -77,10 +77,10 @@ func (req *PuncTwoHintReq) Process(db StaticDB) (HintResp, error) {
 	//guess it makes sense
 
 	setSize := int(math.Round(math.Pow(float64(db.NumRows), 0.5)))
-	start := time.Now()
+	//start := time.Now()
 	initNextHeight(setSize)
-	elapsed := time.Since(start)
-	fmt.Printf("time elapsed for height arr init: %s \n",elapsed)
+	//elapsed := time.Since(start)
+	//fmt.Printf("time elapsed for height arr init: %s \n",elapsed)
 	nHints := req.NumHintsMultiplier * db.NumRows / setSize
 	//fmt.Println(nHints)
 	hints := make([]Row, nHints)
@@ -101,6 +101,88 @@ func (req *PuncTwoHintReq) Process(db StaticDB) (HintResp, error) {
 		//fmt.Println(pset.elems)
 	}
 
+	return &PuncTwoHintResp{
+		Hints:     hints,
+		NRows:     db.NumRows,
+		RowLen:    db.RowLen,
+		SetSize:   setSize,
+		SetGenKey: req.RandSeed,
+	}, nil
+}
+
+//Adding new (unused for now) function to process DB in a locality-friendly manner
+//needs to take in file path instead of staticDB?
+
+func (req *PuncTwoHintReq) LocalityProcess(db StaticDB) (HintResp, error) {
+
+
+	setSize := int(math.Round(math.Pow(float64(db.NumRows), 0.5)))
+	fmt.Printf("Num Rows: %d, setSize: %d \n",db.NumRows,setSize)
+	
+	//start := time.Now()
+	initNextHeight(setSize)
+	//elapsed := time.Since(start)
+	//fmt.Printf("time elapsed for height arr init: %s \n",elapsed)
+	nHints := req.NumHintsMultiplier * db.NumRows / setSize
+	//fmt.Println(nHints)
+	hints := make([]Row, nHints)
+	hintBuf := make([]byte, db.RowLen*nHints)
+	setGen := NewSetGeneratorTwo(req.RandSeed, 0, db.NumRows, setSize)
+	
+
+	//generate set keys without evaluating them
+	tempSets := make([]SetKey, nHints)
+	var pset PuncturableSet
+	for i := 0; i < nHints; i++ {
+		
+		//does this do sqrt(n) work? origSetGen.Gen? 
+		//for original gen it does, we do gennoeval
+		//now there is no enumeration of each set
+		setGen.GenTwoNoEval(&pset)
+		tempSets[i] = pset.SetKey
+
+	}
+
+	f, err := os.Open(db.Path)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // remember to close the file at the end of the program
+    defer f.Close()
+    chunkSize := setSize * db.RowLen
+
+    buf := make([]byte, chunkSize)
+
+	currElems := make([]int, nHints)
+	//do operation per set element
+	for i := 0; i < setSize; i++ {
+		//load i-th chunk of database to memory
+		//TBD
+		//fill currElem with element 'i' of each set
+		for j := 0; j < nHints; j++ {
+			//evaluate each set at i-th element
+			currElems[j] = setGen.EvalOn(tempSets[j], &pset, i) & (setSize - 1) //since we load db of size setSize each turn, we chop off prefix
+		}
+
+		//read current db chunk into buf
+		_, err := f.Read(buf)
+        if err != nil && err != io.EOF {
+            log.Fatal(err)
+        }
+
+        if err == io.EOF {
+            break
+        }
+
+		//function that takes in array of curr elems, array of curr db, array of hints
+		//since i only have a small chunk, do I need to adjust currElems to be smaller? (subtract by i*sqrt{N}?) YES, done (masking)
+
+		//xorLocality(dbChunk, hints, currElems) //hopefully function does hints[i] = hints[i] XOR dbChunk[currElems]
+		psetggm.XorBlocksLocality(buf, currElems,hintBuf, db.RowLen)
+	}
+	for i:= 0; i < nHints; i++ {
+		hints[i] = Row(hintBuf[db.RowLen*i : db.RowLen*(i+1)])
+	}
 	return &PuncTwoHintResp{
 		Hints:     hints,
 		NRows:     db.NumRows,
@@ -295,7 +377,7 @@ func (c *puncTwoClient) Query(i int) ([]QueryReq, ReconstructFunc) {
 	puncSetR = c.setGen.PuncTwo(pset, i)
 	if ctx.setIdx >= 0 {
 		c.replaceSet(ctx.setIdx, newSet)
-		//}
+		}
 	// case 1:
 	// 	newSet := c.setGen.GenWithTwo(i)
 	// 	extraR = c.randomMemberExcept(newSet, i)
@@ -480,6 +562,219 @@ func GetPos(idx int, setSize int) int {
 func (c *puncTwoClient) StateSize() (bitsPerKey, fixedBytes int) {
 	return int(math.Log2(float64(len(c.hints)))), len(c.hints) * c.RowLen
 }
+
+
+
+///LOCALITY TESTS
+func LocalityProcessTest(db StaticDB, masterKey PRGKey) (HintResp, error) {
+
+	setSize := int(math.Round(math.Pow(float64(db.NumRows), 0.5)))
+	//fmt.Printf("Num Rows: %d, setSize: %d \n",db.NumRows,setSize)
+	//start := time.Now()
+	initNextHeight(setSize)
+	//elapsed := time.Since(start)
+	//fmt.Printf("time elapsed for height arr init: %s \n",elapsed)
+	nHints := 128 * db.NumRows / setSize
+	//fmt.Println(nHints)
+	hints := make([]Row, nHints)
+	hintBuf := make([]byte, db.RowLen*nHints)
+	setGen := NewSetGeneratorTwo(masterKey, 0, db.NumRows, setSize)
+	
+
+	//generate set keys without evaluating them
+	tempSets := make([]SetKey, nHints)
+	var pset PuncturableSet
+	for i := 0; i < nHints; i++ {
+		
+		//does this do sqrt(n) work? origSetGen.Gen? 
+		//for original gen it does, we do gennoeval
+		//now there is no enumeration of each set
+		setGen.GenTwoNoEval(&pset)
+		tempSets[i] = pset.SetKey
+
+	}
+
+	f, err := os.Open(db.Path)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // remember to close the file at the end of the program
+    defer f.Close()
+    chunkSize := setSize * db.RowLen
+
+    buf := make([]byte, chunkSize)
+
+	currElems := make([]int, nHints)
+	//do operation per set element
+
+	fmt.Println(setSize)
+	for i := 0; i < setSize; i++ {
+		fmt.Println(i)
+		//load i-th chunk of database to memory
+		//TBD
+		//fill currElem with element 'i' of each set
+		for j := 0; j < nHints; j++ {
+			//evaluate each set at i-th element
+			currElems[j] = setGen.EvalOn(tempSets[j], &pset, i) & (setSize - 1) //since we load db of size setSize each turn, we chop off prefix
+		}
+		//fmt.Println(buf)
+		//read current db chunk into buf
+		_, err := f.Read(buf)
+        if err != nil && err != io.EOF {
+            log.Fatal(err)
+            fmt.Println(err)
+        }
+
+        if err == io.EOF {
+            break
+        }
+        //fmt.Println(buf)
+        //fmt.Println(hintBuf)
+		//function that takes in array of curr elems, array of curr db, array of hints
+		//since i only have a small chunk, do I need to adjust currElems to be smaller? (subtract by i*sqrt{N}?) YES, done (masking)
+
+		//xorLocality(dbChunk, hints, currElems) //hopefully function does hints[i] = hints[i] XOR dbChunk[currElems]
+		psetggm.XorBlocksLocality(buf, currElems,hintBuf, db.RowLen)
+	}
+	for i:= 0; i < nHints; i++ {
+		hints[i] = Row(hintBuf[db.RowLen*i : db.RowLen*(i+1)])
+	}
+
+	return &PuncTwoHintResp{
+		Hints:     hints,
+		NRows:     db.NumRows,
+		RowLen:    db.RowLen,
+		SetSize:   setSize,
+		SetGenKey: masterKey,
+	}, nil
+}
+func NoLocalityProcessTest(db StaticDB, masterKey PRGKey) (HintResp, error) {
+
+	setSize := int(math.Round(math.Pow(float64(db.NumRows), 0.5)))
+
+	initNextHeight(setSize)
+
+	nHints := 128 * db.NumRows / setSize
+
+	hints := make([]Row, nHints)
+	hintBuf := make([]byte, db.RowLen*nHints)
+	setGen := NewSetGeneratorTwo(masterKey, 0, db.NumRows, setSize)
+	
+
+	//generate set keys without evaluating them
+	//currDbElems := make([]SetKey, setSize)
+	var pset PuncturableSet
+
+
+
+	// f, err := os.Open(db.Path)
+ //    if err != nil {
+ //        log.Fatal(err)
+ //    }
+ //    // remember to close the file at the end of the program
+ //    defer f.Close()
+
+ 	fmt.Println(nHints)
+
+	for i := 0; i < nHints; i++ {
+		setGen.GenTwo(&pset)
+		fmt.Println(i)
+		hints[i] = Row(hintBuf[db.RowLen*i : db.RowLen*(i+1)])
+
+		//find db[elem] for each elem in pset.elems
+		//fmt.Println(i)
+		//note -> this fucntion edits pset.elems!
+		psetggm.XorNoLocality(db.Path, db.NumRows*db.RowLen, pset.elems, hints[i])
+
+		//fmt.Println(pset.elems)
+	}
+
+
+	
+
+
+	
+
+	return &PuncTwoHintResp{
+		Hints:     hints,
+		NRows:     db.NumRows,
+		RowLen:    db.RowLen,
+		SetSize:   setSize,
+		SetGenKey: masterKey,
+	}, nil
+}
+
+
+func testContiguousLocality(db StaticDB) int{
+	f, err := os.Open(db.Path)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // remember to close the file at the end of the program
+    defer f.Close()
+    chunkSize := (1<<14)* 32
+    buf := make([]byte, chunkSize)
+    maxRes := 0
+    for i := 0; i < 1000; i++ {
+    	_, err := f.Read(buf)
+        if err != nil && err != io.EOF {
+            log.Fatal(err)
+        }
+
+        if err == io.EOF {
+            break
+        }
+
+        res := 0
+        for j := 0; j < len(buf); j++ {
+        	if buf[j] < 128 {
+        		res += 1
+        	}
+        }
+        //fmt.Println(i)
+        if res > maxRes {
+        	maxRes = res
+        }
+    }
+    return maxRes
+}
+
+func testRandomizedLocality(db StaticDB, locations [1000]int) int{
+	f, err := os.Open(db.Path)
+    if err != nil {
+        fmt.Print(err)
+        fmt.Println("error")
+    }
+    // remember to close the file at the end of the program
+    defer f.Close()
+    chunkSize := (1<<14)* 32
+    
+    buf := make([]byte, chunkSize)
+    maxRes := 0
+    for i := 0; i < 1000; i++ {
+    	f.Seek(int64(locations[i]),0)
+    	_, err := f.Read(buf)
+        if err != nil && err != io.EOF {
+            fmt.Print(err)
+            fmt.Println("error")
+        }
+        res := 0
+        for j := 0; j < len(buf); j++ {
+        	if buf[j] < 128 {
+        		res += 1
+        	}
+        }
+        //fmt.Println(i)
+        if res > maxRes {
+        	maxRes = res
+        }
+        if err == io.EOF {
+            break
+        }
+    }
+   return maxRes
+}
+
 
 
 

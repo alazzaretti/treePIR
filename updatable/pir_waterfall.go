@@ -166,7 +166,7 @@ func (req UpdatableQueryReq) Process(db pir.StaticDB) (interface{}, error) {
 	var err error
 	for l, q := range req.Reqs {
 		layerFlatDb := db.Slice(req.FirstRow[l], req.FirstRow[l+1])
-		resps[l], err = q.Process(pir.StaticDB{req.FirstRow[l+1] - req.FirstRow[l], db.RowLen, layerFlatDb})
+		resps[l], err = q.Process(pir.StaticDB{req.FirstRow[l+1] - req.FirstRow[l], db.RowLen, layerFlatDb,""})
 		if err != nil {
 			return nil, err
 		}

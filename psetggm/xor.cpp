@@ -4,6 +4,7 @@
 #include "intrinsics.h"
 #include <iostream>
 #include <stdio.h>
+#include <string.h>
 
 extern "C"
 {
@@ -30,6 +31,23 @@ extern "C"
 
         //dblen-blocklen = 0 always...
         //std::cout << "AVX: "<<(db_len - block_len) << ", db_len: " << db_len << ", block_len: " << block_len<< std::endl;
+        
+        if (block_len == 1) {
+            for (int i = 0; i < num_elems; i++)
+            {
+                if (elems[i] > (db_len-block_len))
+                {
+                    continue;
+                }
+                uint8_t *block = (uint8_t *)(db + (elems[i]*block_len));
+                
+                uint8_t elem = *block;
+                *out = (*out) ^ elem;
+                
+            }
+            return;
+        }
+
         for (int i = 0; i < num_elems; i++)
         {
             if (elems[i] > (db_len-block_len))
@@ -119,6 +137,81 @@ extern "C"
         }
     }
 
+
+    void xor_locality(const uint8_t* db, unsigned int db_len, 
+        const long long unsigned int* elems, unsigned int num_elems, 
+        unsigned int block_len, uint8_t* out) {
+
+        //function idea: out[i] = db[elems[i]] xor out[i]
+        std::cout << "AVX: "<<(db_len - block_len) << ", db_len: " << db_len << ", block_len: " << block_len<< std::endl;
+        fflush(stdin);
+        for (int i = 0; i < num_elems; i++)
+        {
+            if (elems[i] > (db_len-block_len))
+            {
+                continue;
+            }
+            __m256i *block = (__m256i *)(db + (elems[i]*block_len));
+            for (int b = 0; b < (block_len / 32); b++)
+            {
+                __m256i out256 = _mm256_loadu_si256((__m256i *)out + (i*block_len) + b);
+                __m256i elem = _mm256_loadu_si256(block + b);
+                out256 = _mm256_xor_si256(out256, elem);
+                _mm256_storeu_si256((__m256i *)out +(i*block_len)+ b,  out256);
+            }
+        }
+    }
+
+    void xor_no_locality(char* db_path, unsigned int db_len, 
+        const long long unsigned int* elems, unsigned int num_elems, 
+        unsigned int block_len, uint8_t* out) {
+
+        //function idea: out[i] = db[elems[i]] xor out[i]
+        //std::cout << "AVX, db_len: " << db_len << ", block_len: " << block_len<< ", num_elems: " << num_elems << std::endl;
+        //std::cout << "elems 99336: " << elems[99336] << std::endl;
+        //std::cout << "db: " << &db << std::endl;
+        //__m128i *testblock = (__m128i *)(db + 129);//(block_len));
+        //std::cout << "testblock: " << *db[1] << std::endl;
+        //fflush(stdin);
+        
+        uint8_t* readIn;
+        memset(readIn,0,block_len);
+
+        memset(out,0,block_len);
+        FILE* fd = NULL;
+
+
+
+        fd = fopen(db_path,"r");
+
+        for (int i = 0; i < num_elems; i++)
+        {
+            if (elems[i] > (db_len-block_len))
+            {
+                continue;
+            }
+            unsigned int offset = elems[i] * block_len;
+            fseek(fd,offset, SEEK_SET);
+            size_t didRead = fread(readIn,1,block_len,fd);
+            if (didRead <= 0) {
+                return;
+            }
+            __m256i *block = (__m256i *)(readIn);
+
+            for (int b = 0; b < (block_len / 32); b++)
+            {
+                __m256i out256 = _mm256_loadu_si256((__m256i *)out + b);
+                __m256i elem = _mm256_loadu_si256(block + b);
+                out256 = _mm256_xor_si256(out256, elem);
+                _mm256_storeu_si256((__m256i *)out + b,  out256);
+            }
+        }
+        fclose(fd);
+    }
+
+
+
+
     // Copied from:  https://github.com/dkales/dpf-cpp/blob/master/hashdatastore.cpp
     void xor_hashes_by_bit_vector(const uint8_t* db, unsigned int db_len, 
         const uint8_t* indexing, uint8_t* out) {
@@ -180,7 +273,21 @@ extern "C"
                 //std::cout <<" add: ";
             //}
         }
-
+        if (block_len == 1) {
+            for (int i = 0; i < num_elems; i++)
+            {
+                if (elems[i] > (db_len-block_len))
+                {
+                    continue;
+                }
+                uint8_t *block = (uint8_t *)(db + (elems[i]*block_len));
+                
+                uint8_t elem = *block;
+                *out = (*out) ^ elem;
+                
+            }
+            return;
+        }
         for (int i = 0; i < num_elems; i++)
         {
             if (elems[i] > (db_len-block_len))
@@ -260,6 +367,94 @@ extern "C"
         {
             *(uint8_t *)(out + off8) = out8;
         }
+    }
+
+    void xor_locality(const uint8_t* db, unsigned int db_len, 
+        const long long unsigned int* elems, unsigned int num_elems, 
+        unsigned int block_len, uint8_t* out) {
+
+        //function idea: out[i] = db[elems[i]] xor out[i]
+        //std::cout << "Not AVX, db_len: " << db_len << ", block_len: " << block_len<< ", num_elems: " << num_elems << std::endl;
+        //std::cout << "elems 99336: " << elems[99336] << std::endl;
+        //std::cout << "db: " << &db << std::endl;
+        //__m128i *testblock = (__m128i *)(db + 129);//(block_len));
+        //std::cout << "testblock: " << *db[1] << std::endl;
+        //fflush(stdin);
+        for (int i = 0; i < num_elems; i++)
+        {
+            //std::cout << i << std::endl;
+            //fflush(stdin);
+            if (elems[i] > (db_len-block_len))
+            {
+                continue;
+            }
+            uint8_t *temp_ptr = (uint8_t *)db + (elems[i] * block_len);
+            __m128i *block = (__m128i *)(temp_ptr);
+            // __m128i *block = (__m128i *)(db + (elems[i]*block_len));
+            for (int b = 0; b < (block_len / 16); b++)
+            {
+                
+
+                __m128i out128 = _mm_loadu_si128((__m128i *)(out + (i*block_len)) + b);
+                __m128i elem = _mm_loadu_si128(block + b);
+                out128 = _mm_xor_si128(out128, elem);
+                _mm_storeu_si128((__m128i *)(out +(i*block_len))+ b,  out128);
+            }
+        }
+    }
+
+    void xor_no_locality(char* db_path, unsigned int db_len, 
+        const long long unsigned int* elems, unsigned int num_elems, 
+        unsigned int block_len, uint8_t* out) {
+
+        //function idea: out[i] = db[elems[i]] xor out[i]
+        //std::cout << "Not AVX, db_len: " << db_len << ", block_len: " << block_len<< ", num_elems: " << num_elems << std::endl;
+        //std::cout << "elems 99336: " << elems[99336] << std::endl;
+        //std::cout << "db: " << &db << std::endl;
+        //__m128i *testblock = (__m128i *)(db + 129);//(block_len));
+        //std::cout << "testblock: " << *db[1] << std::endl;
+        //fflush(stdin);
+
+        unsigned char* readIn = (unsigned char *)malloc(block_len);
+        //memset(readIn,0,block_len);
+
+        memset(out,0,block_len);
+
+        FILE* fd = NULL;
+
+
+        fd = fopen(db_path,"r");
+        //std::cout << db_path << std::endl;
+        //fflush(stdin);
+        for (int i = 0; i < num_elems; i++)
+        {
+            if (elems[i] > (db_len-block_len))
+            {
+                continue;
+            }
+            unsigned int offset = elems[i] * block_len;
+            fseek(fd,offset, SEEK_SET);
+            size_t didRead = fread(readIn,1,block_len,fd);
+            if (didRead <= 0) {
+                return;
+            }
+            //std::cout << "read i: " << i << std::endl;
+            //fflush(stdin);
+            __m128i *block = (__m128i *)(readIn);
+
+            for (int b = 0; b < (block_len / 16); b++)
+            {   
+                //printf("got here!%d",b);
+
+                __m128i out128 = _mm_loadu_si128((__m128i *)out + b);
+                __m128i elem = _mm_loadu_si128(block + b);
+                out128 = _mm_xor_si128(out128, elem);
+                _mm_storeu_si128((__m128i *)out + b,  out128);
+
+            }
+        }
+        free(readIn);
+        fclose(fd);
     }
 
     // Copied from:  https://github.com/dkales/dpf-cpp/blob/master/hashdatastore.cpp

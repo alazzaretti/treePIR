@@ -48,14 +48,15 @@ func (gen *SecondGGMSetGeneratorC) EvalPunctured(pset []byte, hole int, elems []
 	return;
 }
 
-// func XorBlocks(db []byte, offsets []int, out []byte) {
-// 	C.xor_rows((*C.uchar)(&db[0]), C.uint(len(db)), (*C.ulonglong)(unsafe.Pointer(&offsets[0])), C.uint(len(offsets)), C.uint(len(out)), (*C.uchar)(&out[0]))
-// }
+func XorBlocksLocality(db []byte, offsets []int, out []byte, block_len int) {
+	C.xor_locality((*C.uchar)(&db[0]), C.uint(len(db)), (*C.ulonglong)(unsafe.Pointer(&offsets[0])), C.uint(len(offsets)), C.uint(block_len), (*C.uchar)(&out[0]))
+}
 
-// func XorHashesByBitVector(db []byte, indexing []byte, out []byte) {
-// 	C.xor_hashes_by_bit_vector((*C.uchar)(&db[0]), C.uint(len(db)),
-// 		(*C.uchar)(&indexing[0]), (*C.uchar)(&out[0]))
-// }
+func XorNoLocality(db_path string, db_len int,offsets []int, out []byte) {
+	cstr := C.CString(db_path)
+	defer C.free(unsafe.Pointer(cstr))
+	C.xor_no_locality(cstr, C.uint(db_len), (*C.ulonglong)(unsafe.Pointer(&offsets[0])), C.uint(len(offsets)), C.uint(len(out)), (*C.uchar)(&out[0]))
+}
 
 func (gen *SecondGGMSetGeneratorC) Distinct(elems []int) bool {
 	return (C.new_distinct(gen.cgen, (*C.ulonglong)(unsafe.Pointer(&elems[0])), C.uint(len(elems))) != 0)

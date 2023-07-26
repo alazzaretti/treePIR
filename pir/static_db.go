@@ -10,6 +10,7 @@ type StaticDB struct {
 	NumRows int
 	RowLen  int
 	FlatDb  []byte
+	Path string
 }
 
 func (db *StaticDB) Slice(start, end int) []byte {
@@ -25,7 +26,7 @@ func (db *StaticDB) Row(i int) Row {
 
 func StaticDBFromRows(data []Row) *StaticDB {
 	if len(data) < 1 {
-		return &StaticDB{0, 0, nil}
+		return &StaticDB{0, 0, nil,""}
 	}
 
 	rowLen := len(data[0])
@@ -39,13 +40,13 @@ func StaticDBFromRows(data []Row) *StaticDB {
 
 		copy(flatDb[i*rowLen:], v[:])
 	}
-	return &StaticDB{len(data), rowLen, flatDb}
+	return &StaticDB{len(data), rowLen, flatDb, ""}
 }
 
 
 func StaticDBFromRows2(src *rand.Rand, nRows, rowLen int) *StaticDB {
 	if (nRows < 1 || rowLen < 1) {
-		return &StaticDB{0, 0, nil}
+		return &StaticDB{0, 0, nil,""}
 	}
 	flatDb := make([]byte, rowLen * nRows)
 	for i := 0; i < nRows; i++ {
@@ -54,10 +55,12 @@ func StaticDBFromRows2(src *rand.Rand, nRows, rowLen int) *StaticDB {
 			flatDb[currI + j]  = byte((i+j)%256)
 		}
 	}
-	return &StaticDB{nRows, rowLen, flatDb}
+	return &StaticDB{nRows, rowLen, flatDb, ""}
 }
 
-
+func DiskDB(dbPath string, nRows, rowLen int) StaticDB {
+	return StaticDB{nRows,rowLen, nil, dbPath}
+}
 
 func (db StaticDB) Hint(req HintReq, resp *HintResp) (err error) {
 	*resp, err = req.Process(db)
